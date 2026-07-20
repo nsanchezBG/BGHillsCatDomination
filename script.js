@@ -1,83 +1,146 @@
-const openCatgpt = document.querySelector("#openCatgpt");
-const catgpt = document.querySelector("#catgpt");
-const chatBody = document.querySelector("#chatBody");
-const chatForm = document.querySelector("#chatForm");
-const chatInput = document.querySelector("#chatInput");
-const promptButtons = [...document.querySelectorAll("[data-question]")];
 const siteHeader = document.querySelector(".site-header");
-const mobileMenu = document.querySelector(".mobile-menu");
+const menuToggle = document.querySelector(".menu-toggle");
+const mobileNav = document.querySelector(".mobile-nav");
+const progressBar = document.querySelector(".page-progress span");
+const revealTargets = [...document.querySelectorAll("[data-reveal]")];
+const demandItems = [...document.querySelectorAll(".demands li")];
+const evidenceItems = [...document.querySelectorAll(".evidence__item")];
+const productStage = document.querySelector(".product-stage");
+const benefitIndex = document.querySelector("#benefitIndex");
+
+window.setTimeout(() => document.body.classList.add("is-ready"), 1050);
+
+menuToggle?.addEventListener("click", () => {
+  const open = siteHeader?.classList.toggle("menu-open") ?? false;
+  document.body.classList.toggle("menu-open", open);
+  menuToggle.setAttribute("aria-expanded", String(open));
+  menuToggle.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+});
+
+mobileNav?.querySelectorAll("a").forEach((link) => {
+  link.addEventListener("click", () => {
+    siteHeader?.classList.remove("menu-open");
+    document.body.classList.remove("menu-open");
+    menuToggle?.setAttribute("aria-expanded", "false");
+    menuToggle?.setAttribute("aria-label", "Abrir menú");
+  });
+});
+
+let scrollFrame = 0;
+function updateScrollUI() {
+  const root = document.documentElement;
+  const scrollable = Math.max(1, root.scrollHeight - window.innerHeight);
+  root.style.setProperty("--page-progress", String(Math.min(1, window.scrollY / scrollable)));
+  siteHeader?.classList.toggle("is-scrolled", window.scrollY > 24);
+  scrollFrame = 0;
+}
+
+window.addEventListener("scroll", () => {
+  if (scrollFrame) return;
+  scrollFrame = window.requestAnimationFrame(updateScrollUI);
+}, { passive: true });
+updateScrollUI();
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    entry.target.classList.add("is-visible");
+    revealObserver.unobserve(entry.target);
+  });
+}, { threshold: 0.14, rootMargin: "0px 0px -8%" });
+revealTargets.forEach((target) => revealObserver.observe(target));
+
+const demandObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    demandItems.forEach((item) => item.classList.toggle("is-current", item === entry.target));
+  });
+}, { threshold: 0.6 });
+demandItems.forEach((item) => demandObserver.observe(item));
+
+const packStates = {
+  "01": { y: "-4px", rotate: "-1deg", halo: ".92" },
+  "02": { y: "4px", rotate: ".8deg", halo: ".98" },
+  "03": { y: "-2px", rotate: "-1.6deg", halo: "1.04" },
+  "04": { y: "2px", rotate: ".4deg", halo: "1.1" }
+};
+
+function activateEvidence(item) {
+  const index = item.dataset.benefit || "01";
+  evidenceItems.forEach((entry) => entry.classList.toggle("is-active", entry === item));
+  if (benefitIndex) benefitIndex.textContent = index;
+  const state = packStates[index];
+  if (!productStage || !state) return;
+  productStage.style.setProperty("--pack-y", state.y);
+  productStage.style.setProperty("--pack-rotate", state.rotate);
+  productStage.style.setProperty("--pack-halo", state.halo);
+}
+
+const evidenceObserver = new IntersectionObserver((entries) => {
+  const visible = entries
+    .filter((entry) => entry.isIntersecting)
+    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+  if (visible) activateEvidence(visible.target);
+}, { threshold: [0.25, 0.45, 0.65], rootMargin: "-22% 0px -28%" });
+evidenceItems.forEach((item) => evidenceObserver.observe(item));
 
 const responseLibrary = {
   digest: {
     question: "¿Qué ayuda a una digestión sensible?",
     answers: [
-      "Una fórmula altamente digestible, suave con el estómago y pensada para una absorción óptima de nutrientes. Traducción felina: comer bien y conservar la dignidad.",
-      "La ciencia recomienda ingredientes fáciles de digerir y fibra prebiótica. Yo recomiendo, además, servir a tiempo. Es una cuestión de respeto.",
-      "Sensitive Stomach & Skin apoya la salud digestiva con una receta suave y altamente digestible. Menos drama estomacal; más tiempo para gobernar el sofá."
+      "Una fórmula altamente digestible y suave con el estómago. Traducción felina: comer bien sin renunciar a la dignidad.",
+      "Ingredientes fáciles de digerir y fibra prebiótica. Menos drama estomacal; más tiempo para gobernar el sofá.",
+      "Sensitive Stomach & Skin apoya una digestión equilibrada y la absorción óptima de nutrientes. Ciencia servida a tiempo."
     ]
   },
   stool: {
     question: "¿Cómo apoyamos heces firmes?",
     answers: [
-      "La fibra prebiótica favorece bacterias intestinales benéficas y una digestión equilibrada. Tu nariz puede enviarnos una carta de agradecimiento.",
-      "Heces firmes empiezan por una digestión equilibrada. La fibra prebiótica ayuda a nutrir el microbioma intestinal. Ciencia bastante elegante para hablar de la caja de arena.",
-      "Una combinación de alta digestibilidad y fibra prebiótica ayuda a mantener el equilibrio digestivo. Resultado: una caja de arena con mejores modales."
+      "La fibra prebiótica favorece bacterias intestinales benéficas. Tu caja de arena puede agradecérselo a la ciencia.",
+      "Alta digestibilidad más fibra prebiótica: una combinación pensada para una digestión equilibrada y mejores modales en la caja.",
+      "Heces firmes empiezan por un microbioma bien nutrido. Es una conversación elegante sobre un tema poco elegante."
     ]
   },
   coat: {
-    question: "¿Cómo logramos una piel sana y un pelaje brillante?",
+    question: "¿Cómo logramos un pelaje brillante?",
     answers: [
-      "Vitamina E y ácidos grasos Omega-3 y 6 ayudan a nutrir la piel y mantener un pelaje lustroso. Los filtros pasan a ser opcionales.",
-      "El brillo no es vanidad cuando está respaldado por nutrición: vitamina E y Omegas para apoyar una piel sana y un pelaje digno de primer plano.",
-      "Piel nutrida, pelaje brillante y actitud intacta. Hill's combina vitamina E con ácidos grasos esenciales para apoyar ambos."
+      "Vitamina E y ácidos grasos Omega-3 y 6 ayudan a nutrir la piel y mantener un pelaje lustroso. Los filtros son opcionales.",
+      "El brillo sí puede tener respaldo científico: vitamina E y Omegas para una piel sana y un pelaje digno de primer plano.",
+      "Piel nutrida, pelaje brillante, actitud intacta. Hill's combina vitamina E con ácidos grasos esenciales para apoyar ambos."
     ]
   },
   antioxidants: {
     question: "¿Qué hacen los antioxidantes?",
     answers: [
-      "Antioxidantes clínicamente comprobados, vitaminas C+E, ayudan a apoyar un sistema inmune saludable. Defensas con respaldo científico y aprobación felina.",
-      "Las vitaminas C+E forman parte de una mezcla antioxidante clínicamente comprobada que apoya el sistema inmune. Incluso un imperio necesita buenas defensas.",
-      "Los antioxidantes ayudan a respaldar las defensas naturales. En esta fórmula, las vitaminas C+E apoyan un sistema inmune saludable. Ciencia: 1. Caos: bajo control."
+      "Antioxidantes clínicamente comprobados y vitaminas C+E ayudan a apoyar un sistema inmune saludable. Todo imperio necesita defensas.",
+      "Las vitaminas C+E forman parte de una mezcla antioxidante que apoya las defensas naturales. Ciencia: 1. Caos: bajo control.",
+      "Ayudan a respaldar el sistema inmune para que su majestad pueda concentrarse en asuntos importantes, como ignorarte."
     ]
   },
   generic: {
     question: "Tengo otra pregunta",
     answers: [
-      "Puedo ayudarte con digestión sensible, fibra prebiótica, piel y pelaje o antioxidantes. Formula tu pregunta como si estuvieras frente al consejo felino.",
-      "Mi especialidad es la nutrición respaldada por ciencia. Pregunta por digestión, heces firmes, Omegas, vitamina E o defensas antioxidantes.",
-      "Procesé tu consulta con nueve vidas de potencia. Dame una pista: ¿estómago, microbioma, pelaje o sistema inmune?"
+      "Puedo procesar consultas sobre digestión, microbioma, piel, pelaje o antioxidantes. Elige sabiamente, humano.",
+      "Mi especialidad es la nutrición respaldada por ciencia. Dame una pista: ¿estómago, caja de arena, brillo o defensas?",
+      "Nueve vidas de procesamiento y todavía necesito una palabra clave. Prueba con digestión, Omegas o antioxidantes."
     ]
   }
 };
 
+const chatBody = document.querySelector("#chatBody");
+const chatForm = document.querySelector("#chatForm");
+const chatInput = document.querySelector("#chatInput");
+const promptButtons = [...document.querySelectorAll("[data-question]")];
 const lastAnswerIndex = new Map();
-let catgptBusy = false;
+let chatBusy = false;
 
-function appendMessage(type, label, text) {
-  if (!chatBody) return;
-  const wrapper = document.createElement("div");
-  wrapper.className = `message ${type}-message`;
-  const messageLabel = document.createElement("span");
-  messageLabel.textContent = label;
-  const paragraph = document.createElement("p");
-  paragraph.textContent = text;
-  wrapper.append(messageLabel, paragraph);
-  chatBody.append(wrapper);
-  chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
-}
-
-function appendTypingMessage() {
-  if (!chatBody) return null;
-  const wrapper = document.createElement("div");
-  wrapper.className = "message bot-message typing-message";
-  const label = document.createElement("span");
-  label.textContent = "CATGPT ESTÁ PROCESANDO";
-  const dots = document.createElement("p");
-  dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
-  wrapper.append(label, dots);
-  chatBody.append(wrapper);
-  chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
-  return wrapper;
+function classifyQuestion(question) {
+  const normalized = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/antioxid|defensa|inmune|vitamina c/.test(normalized)) return "antioxidants";
+  if (/heces|caca|arena|microbioma|prebiot|fibra/.test(normalized)) return "stool";
+  if (/pelo|pelaje|piel|brillo|omega|vitamina e/.test(normalized)) return "coat";
+  if (/digest|estomago|sensible|absorcion|vomit/.test(normalized)) return "digest";
+  return "generic";
 }
 
 function pickAnswer(key) {
@@ -89,37 +152,67 @@ function pickAnswer(key) {
   return answers[next];
 }
 
-function classifyQuestion(question) {
-  const normalized = question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if (/antioxid|defensa|inmune|vitamina c/.test(normalized)) return "antioxidants";
-  if (/heces|caca|arena|microbioma|prebiot|fibra/.test(normalized)) return "stool";
-  if (/pelo|pelaje|piel|brillo|omega|vitamina e/.test(normalized)) return "coat";
-  if (/digest|estomago|sensible|absorcion|vomit/.test(normalized)) return "digest";
-  return "generic";
-}
-
-function setChatControlsDisabled(disabled) {
+function setChatDisabled(disabled) {
   promptButtons.forEach((button) => { button.disabled = disabled; });
   if (chatInput) chatInput.disabled = disabled;
   const submit = chatForm?.querySelector("button");
   if (submit) submit.disabled = disabled;
 }
 
+function appendMessage(type, label, text) {
+  if (!chatBody) return null;
+  const message = document.createElement("div");
+  message.className = `chat__message chat__message--${type}`;
+
+  if (type === "bot") {
+    const avatar = document.createElement("img");
+    avatar.src = "assets/catgpt.svg";
+    avatar.alt = "";
+    avatar.setAttribute("aria-hidden", "true");
+    message.append(avatar);
+  } else {
+    const avatar = document.createElement("span");
+    avatar.className = "chat__avatar";
+    avatar.textContent = "H";
+    avatar.setAttribute("aria-hidden", "true");
+    message.append(avatar);
+  }
+
+  const content = document.createElement("div");
+  const messageLabel = document.createElement("span");
+  const paragraph = document.createElement("p");
+  messageLabel.textContent = label;
+  paragraph.textContent = text;
+  content.append(messageLabel, paragraph);
+  message.append(content);
+  chatBody.append(message);
+  chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+  return message;
+}
+
+function appendTyping() {
+  const message = appendMessage("bot", "CATGPT ESTÁ PENSANDO", "");
+  if (!message) return null;
+  message.classList.add("typing");
+  const paragraph = message.querySelector("p");
+  if (paragraph) paragraph.innerHTML = "<i></i><i></i><i></i>";
+  return message;
+}
+
 function askCatgpt(key, customQuestion = "") {
-  if (!responseLibrary[key] || !chatBody || catgptBusy) return;
-  catgptBusy = true;
-  const question = customQuestion || responseLibrary[key].question;
-  appendMessage("user", "HUMANO", question);
-  setChatControlsDisabled(true);
-  const typingMessage = appendTypingMessage();
+  if (chatBusy || !responseLibrary[key]) return;
+  chatBusy = true;
+  appendMessage("user", "HUMANO", customQuestion || responseLibrary[key].question);
+  setChatDisabled(true);
+  const typing = appendTyping();
 
   window.setTimeout(() => {
-    typingMessage?.remove();
+    typing?.remove();
     appendMessage("bot", "CATGPT", pickAnswer(key));
-    setChatControlsDisabled(false);
-    catgptBusy = false;
+    setChatDisabled(false);
+    chatBusy = false;
     chatInput?.focus({ preventScroll: true });
-  }, 650);
+  }, 620);
 }
 
 promptButtons.forEach((button) => {
@@ -133,58 +226,3 @@ chatForm?.addEventListener("submit", (event) => {
   chatInput.value = "";
   askCatgpt(classifyQuestion(question), question);
 });
-
-openCatgpt?.addEventListener("click", () => {
-  catgpt?.scrollIntoView({ behavior: "smooth", block: "start" });
-  window.setTimeout(() => chatInput?.focus(), 700);
-});
-
-mobileMenu?.addEventListener("click", () => {
-  const open = siteHeader?.classList.toggle("menu-open") ?? false;
-  mobileMenu.setAttribute("aria-expanded", String(open));
-  mobileMenu.setAttribute("aria-label", open ? "Cerrar navegación" : "Abrir navegación");
-});
-
-siteHeader?.querySelectorAll("a").forEach((link) => {
-  link.addEventListener("click", () => {
-    siteHeader.classList.remove("menu-open");
-    mobileMenu?.setAttribute("aria-expanded", "false");
-  });
-});
-
-const revealTargets = [...document.querySelectorAll("[data-reveal]")];
-
-revealTargets.forEach((element) => {
-  element.classList.add("reveal");
-  const direction = element.dataset.reveal;
-  if (direction && direction !== "up") element.classList.add(`from-${direction}`);
-  if (element.dataset.revealDelay) {
-    element.style.setProperty("--reveal-delay", `${element.dataset.revealDelay}ms`);
-  }
-});
-
-const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach((entry) => {
-    if (!entry.isIntersecting) return;
-    entry.target.classList.add("is-visible");
-    revealObserver.unobserve(entry.target);
-  });
-}, { threshold: 0.13, rootMargin: "0px 0px -7%" });
-
-revealTargets.forEach((element) => revealObserver.observe(element));
-
-let scrollQueued = false;
-function updateScrollProgress() {
-  const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-  const progress = Math.min(1, window.scrollY / scrollable);
-  document.documentElement.style.setProperty("--scroll-progress", progress);
-  scrollQueued = false;
-}
-
-window.addEventListener("scroll", () => {
-  if (scrollQueued) return;
-  scrollQueued = true;
-  window.requestAnimationFrame(updateScrollProgress);
-}, { passive: true });
-
-updateScrollProgress();
